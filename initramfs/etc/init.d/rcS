@@ -1,0 +1,6 @@
+#!/bin/sh
+echo "Welcome to Minimal Linux"
+mount -t proc none /proc
+mount -t sysfs none /sys
+/bin/sh
+

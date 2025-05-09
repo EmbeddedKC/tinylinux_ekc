@@ -32,6 +32,11 @@ modules.builtin
 *.patch
 *.gcno
 
+# Yan_ice rule
+initramfs.cpio.gz
+zImage
+
+
 #
 # Top-level generic files
 #

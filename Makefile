@@ -4,6 +4,18 @@ SUBLEVEL = 35
 EXTRAVERSION = .13
 NAME = Yokohama
 
+#################################
+# Yan_ice: set the environment.
+
+export PATH := ${PATH}:$(shell pwd)/toolchain/4.3.2/bin
+export CROSS_COMPILE := arm-none-linux-gnueabi-
+export ARCH := arm
+
+# note: /arch/arm/boot/Image is the output binary.
+# note: cd initramfs && find . -print0 | cpio --null -ov --format=newc | gzip -9 > ../initramfs.cpio.gz
+#################################
+
+
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"
 # More info can be located in ./README
@@ -336,7 +348,7 @@ MODFLAGS	= -DMODULE
 CFLAGS_MODULE   = $(MODFLAGS)
 AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  = -T $(srctree)/scripts/module-common.lds
-CFLAGS_KERNEL	=
+CFLAGS_KERNEL	= 
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
@@ -528,6 +540,10 @@ endif # $(dot-config)
 # This allow a user to issue only 'make' to build a kernel including modules
 # Defaults vmlinux but it is usually overridden in the arch makefile
 all: vmlinux
+	cp $(shell pwd)/arch/arm/boot/zImage $(shell pwd)
+	rm -f initramfs.cpio.gz
+	cd initramfs && find . | cpio -o --format=newc | gzip > ../initramfs.cpio.gz
+# Yan_ice: copy the target out.
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os
