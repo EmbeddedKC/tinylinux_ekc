@@ -1,3 +1,6 @@
+
+
+
 /*
  *  linux/arch/arm/boot/bootp/init.S
  *
@@ -20,7 +23,30 @@
 		.type	_start, #function
 		.globl	_start
 
-_start:		add	lr, pc, #-0x8		@ lr = current load addr
+_start:		
+
+
+/*
+*  =============== Yan_ice: load early mem layout ==============
+*/
+		mov r8, #0xfffff000 	@ MMK TRAMPOLINE
+		mov r7, #4			@ MMKAPI ALLOC
+		mov r0, #0
+		mov r1, _stext		@ vaddr start
+		mov r2, _etext		@ vaddr end
+		mov r3, 0xfffffffe	@ MAP IDENTICAL
+		mov r4, 0xe			@ R | W | X
+		
+		sub r2, r2, r1
+		MOV r1, r1, LSR #12
+		MOV r2, r2, LSR #12
+		add r2, r2, #1
+/*
+*  =============== Yan_ice: load early mem layout finish ==============
+*/
+
+
+		add	lr, pc, #-0x8		@ lr = current load addr
 		adr	r13, data
 		ldmia	r13!, {r4-r6}		@ r5 = dest, r6 = length
 		add	r4, r4, lr		@ r4 = initrd_start + load addr

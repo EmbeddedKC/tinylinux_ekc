@@ -529,6 +529,8 @@ static void __init mm_init(void)
 	 * page_cgroup requires countinous pages as memmap
 	 * and it's bigger than MAX_ORDER unless SPARSEMEM.
 	 */
+
+	printk(KERN_NOTICE "mm_init()\n");
 	page_cgroup_init_flatmem();
 	mem_init();
 	kmem_cache_init();
@@ -536,12 +538,15 @@ static void __init mm_init(void)
 	vmalloc_init();
 }
 
+//Yan_ice: 1 start_kernel
 asmlinkage void __init start_kernel(void)
 {
 	char * command_line;
 	extern struct kernel_param __start___param[], __stop___param[];
 
 	smp_setup_processor_id();
+
+	printk(KERN_NOTICE "start_kernel()\n");
 
 	/*
 	 * Need to run as early as possible, to initialize the

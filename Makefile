@@ -11,6 +11,8 @@ export PATH := ${PATH}:$(shell pwd)/toolchain/4.3.2/bin
 export CROSS_COMPILE := arm-none-linux-gnueabi-
 export ARCH := arm
 
+# KCPPFLAGS += -D__LINUX_ARM_ARCH__=7
+
 # note: /arch/arm/boot/Image is the output binary.
 # note: cd initramfs && find . -print0 | cpio --null -ov --format=newc | gzip -9 > ../initramfs.cpio.gz
 #################################

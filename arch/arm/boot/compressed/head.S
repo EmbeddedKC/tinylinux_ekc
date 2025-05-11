@@ -124,6 +124,10 @@ wait:		mrc	p14, 0, pc, c0, c1, 0
 /*
  * sort out different calling conventions
  */
+
+/*
+ * Yan_ice: The entry address of compressor.
+ */
 		.align
 start:
 		.type	start,#function
@@ -135,8 +139,17 @@ start:
 		.word	0x016f2818		@ Magic numbers to help the loader
 		.word	start			@ absolute load/run zImage address
 		.word	_edata			@ zImage end address
-1:		mov	r7, r1			@ save architecture ID
+1:
+
+		mov	r7, r1			@ save architecture ID
 		mov	r8, r2			@ save atags pointer
+
+/*
+*		mrc p15, 0, r2, c1, c0, 0   @ closs MMU for testing.
+*    	bic r2, r2, #1             
+*    	mcr p15, 0, r2, c1, c0, 0   
+*    	isb                         
+*/
 
 #ifndef __ARM_ARCH_2__
 		/*
@@ -146,12 +159,12 @@ start:
 		 */
 		mrs	r2, cpsr		@ get current mode
 		tst	r2, #3			@ not user?
-		bne	not_angel
+		bne	not_angel       @ addr = 0x60800040
 		mov	r0, #0x17		@ angel_SWIreason_EnterSVC
  ARM(		swi	0x123456	)	@ angel_SWI_ARM
  THUMB(		svc	0xab		)	@ angel_SWI_THUMB
 not_angel:
-		mrs	r2, cpsr		@ turn off interrupts to
+		mrs	r2, cpsr		@ turn off interrupts to   addr = *04c
 		orr	r2, r2, #0xc0		@ prevent angel from running
 		msr	cpsr_c, r2
 #else
@@ -162,17 +175,78 @@ not_angel:
 		 * Note that some cache flushing and other stuff may
 		 * be needed here - is there an Angel SWI call for this?
 		 */
+		b 1f  
 
+		.rept	8
+		mov	r0, r0
+		.endr
+1:
+
+// Here sp is temp initialized before pc. Store the context.
+		add  sp, pc, #-8   @ addr = *07c
+
+// actually only r7-r9 are needed to store (params from bootloader)
+		
+		STMFD SP!, {R7-R9}   
+/*
+*  =============== Yan_ice: load early mem layout ==============
+*  warn: no context save/load when calling ECK API.
+*/
+		ldr r8, =0xfffff000 @ MMK TRAMPOLINE
+		mov r7, #4			@ MMKAPI ALLOC
+		ldr r3, =0xfffffffe	@ MAP IDENTICAL
+		mov r4, #0xe			@ R | W | X
+		mov r0, #0			@ kernel pt id: 0
+		ldr r1, =0x60800		@ kernel load ppn start
+		ldr r2, =0x62000		@ kernel load ppn end
+		sub r2, r2, r1
+
+		BLX r8
+
+		ldr r8, =0xfffff000 @ MMK TRAMPOLINE
+		mov r7, #4			@ MMKAPI ALLOC
+		ldr r3, =0xfffffffe	@ MAP IDENTICAL
+		mov r4, #0xe			@ R | W | X
+		mov r0, #0			@ kernel pt id: 0
+		ldr  r1, =0x60000	@ boot loader ppn start
+		ldr  r2, =0x60009	@ boot loader ppn end
+		sub r2, r2, r1
+
+		BLX r8
+
+		ldr r8, =0xfffff000 @ MMK TRAMPOLINE
+		mov r7, #4			@ MMKAPI ALLOC
+		ldr r3, =0xfffffffe	@ MAP IDENTICAL
+		mov r4, #0xe			@ R | W | X
+		mov r0, #0			@ kernel pt id: 0
+		ldr  r1, =0x10009	@ uart ppn start
+		ldr  r2, =0x10010	@ uart loader ppn end
+		sub r2, r2, r1
+		
+		BLX r8
+
+/*
+*  =============== Yan_ice: load early mem layout finish ==============
+*/
+		LDMFD SP!, {R7-R9}   @  addr =*0f0
+// Restore the context.
+		b 1f
+
+// here must use jump to next .text section
+// because "ldr ...,=<const in pool>" are used,
+// and the pool is linked here.
 		/*
 		 * some architecture specific code can be inserted
 		 * by the linker here, but it should preserve r7, r8, and r9.
 		 */
 
 		.text
-		adr	r0, LC0
+1:
+		adr	r0, LC0			@ addr = *0120
  ARM(		ldmia	r0, {r1, r2, r3, r4, r5, r6, r11, ip, sp})
  THUMB(		ldmia	r0, {r1, r2, r3, r4, r5, r6, r11, ip}	)
  THUMB(		ldr	sp, [r0, #32]				)
+
 		subs	r0, r0, r1		@ calculate the delta offset
 
 						@ if delta is zero, we are
@@ -226,7 +300,7 @@ not_angel:
 		blo	1b
 #endif
 
-not_relocated:	mov	r0, #0
+not_relocated:	mov	r0, #0     @ addr = *15c
 1:		str	r0, [r2], #4		@ clear bss
 		str	r0, [r2], #4
 		str	r0, [r2], #4
@@ -239,7 +313,11 @@ not_relocated:	mov	r0, #0
 		 * sufficiently.  Turn the cache on, set up some
 		 * pointers, and start decompressing.
 		 */
-		bl	cache_on
+		
+		/*
+		* bl	cache_on
+		* No need of cache_on anymore.
+		*/
 
 		mov	r1, sp			@ malloc space above stack
 		add	r2, sp, #0x10000	@ 64k max
@@ -254,7 +332,7 @@ not_relocated:	mov	r0, #0
  *   r4 >= r2 -> OK
  *   r4 + image length <= r5 -> OK
  */
-		cmp	r4, r2
+		cmp	r4, r2			@ addr = *170
 		bhs	wont_overwrite
 		add	r0, r4, r6
 		cmp	r0, r5
@@ -300,7 +378,7 @@ not_relocated:	mov	r0, #0
  * r4     = kernel execution address
  * r7     = architecture ID
  */
-wont_overwrite:	mov	r0, r4
+wont_overwrite:	mov	r0, r4  @ addr = 0x*124
 		mov	r3, r7
 		bl	decompress_kernel
 		b	call_kernel

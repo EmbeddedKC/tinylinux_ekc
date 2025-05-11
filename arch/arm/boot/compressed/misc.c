@@ -192,7 +192,8 @@ unsigned long
 decompress_kernel(unsigned long output_start, unsigned long free_mem_ptr_p,
 		unsigned long free_mem_ptr_end_p,
 		int arch_id)
-{
+{ 
+	// The start address: 0x60600a08
 	unsigned char *tmp;
 
 	output_data		= (unsigned char *)output_start;
